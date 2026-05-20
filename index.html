@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8" />
+  <title>Monaco JSON Schema Example</title>
+
+  <style>
+    html,
+    body,
+    #container {
+      margin: 0;
+      width: 100%;
+      height: 100vh;
+      overflow: hidden;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="container"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/min/vs/loader.js"></script>
+
+  <script>
+    require.config({
+      paths: {
+        vs: "https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/min/vs"
+      }
+    });
+
+    require(["vs/editor/editor.main"], function () {
+
+      // Configure JSON schema
+      monaco.languages.json.jsonDefaults.setDiagnosticsOptions({
+        validate: true,
+        allowComments: false,
+        schemas: [
+          {
+            uri: "http://my-schema/user-schema.json",
+
+            // Which files this schema applies to
+            fileMatch: ["*"],
+
+            schema: {
+              type: "object",
+
+              required: ["name", "role"],
+
+              properties: {
+                name: {
+                  type: "string",
+                  description: "Full user name"
+                },
+
+                age: {
+                  type: "integer",
+                  minimum: 0,
+                  description: "User age"
+                },
+
+                role: {
+                  type: "string",
+                  description: "Access role",
+                  enum: [
+                    "admin",
+                    "editor",
+                    "viewer"
+                  ]
+                },
+
+                active: {
+                  type: "boolean",
+                  description: "Whether account is active"
+                },
+
+                address: {
+                  type: "object",
+                  description: "User address",
+
+                  properties: {
+                    city: {
+                      type: "string",
+                      description: "City name"
+                    },
+
+                    country: {
+                      type: "string",
+                      enum: [
+                        "US",
+                        "CA",
+                        "UK",
+                        "DE"
+                      ],
+                      description: "Country code"
+                    }
+                  }
+                }
+              },
+
+              additionalProperties: false
+            }
+          }
+        ]
+      });
+
+      // Create model
+      const model = monaco.editor.createModel(
+        `{
+  "name": "Alice",
+  "role": "admin"
+}`,
+        "json",
+        monaco.Uri.parse("file:///config.json")
+      );
+
+      // Create editor
+      monaco.editor.create(
+        document.getElementById("container"),
+        {
+          model,
+
+          theme: "vs-dark",
+
+          automaticLayout: true,
+
+          minimap: {
+            enabled: false
+          },
+
+          formatOnPaste: true,
+          formatOnType: true,
+
+          quickSuggestions: true,
+          suggestOnTriggerCharacters: true
+        }
+      );
+    });
+  </script>
+</body>
+
+</html>
