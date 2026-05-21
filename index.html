@@ -16,11 +16,11 @@
     }
 
     #container {
-      height: 90vh;
+      height: 80vh;
     }
 
     #output {
-      height: 10vh;
+      height: 20vh;
       background: #f0f0f0;
       padding: 8px;
       overflow: hidden auto;
@@ -70,7 +70,6 @@
 
                   required: [
                     "type",
-                    "value_type",
                     "id",
                     "description"
                   ],
@@ -140,50 +139,57 @@
                     {
                       if: {
                         properties: {
-                          value_type: {
-                            const: "constant"
-                          }
-                        }
-                      },
-                      then: {
-                        required: ["constant_value"]
-                      }
-                    },
-                    {
-                      if: {
-                        properties: {
-                          value_type: {
-                            const: "dynamic"
-                          }
-                        }
-                      },
-                      then: {
-                        required: ["dynamic_variable"]
-                      }
-                    },
-                    {
-                      if: {
-                        properties: {
-                          value_type: { const: "prompt" }
-                        }
-                      },
-                      then: {
-                        not: {
-                          anyOf: [
-                            { required: ["constant_value"] },
-                            { required: ["dynamic_variable"] }
-                          ]
-                        }
-                      }
-                    },
-                    {
-                      if: {
-                        properties: {
                           type: { const: "object" }
                         }
                       },
                       then: {
-                        required: ["properties"]
+                        required: ["properties"],
+                        not: {
+                          anyOf: [
+                            { required: ["value_type"] },
+                            { required: ["constant_value"] },
+                            { required: ["dynamic_variable"] }
+                          ]
+                        }
+                      },
+                      else: {
+                        allOf: [
+                          {
+                            if: {
+                              properties: {
+                                value_type: { const: "constant" }
+                              }
+                            },
+                            then: {
+                              required: ["constant_value"]
+                            }
+                          },
+                          {
+                            if: {
+                              properties: {
+                                value_type: { const: "dynamic" }
+                              }
+                            },
+                            then: {
+                              required: ["dynamic_variable"]
+                            }
+                          },
+                          {
+                            if: {
+                              properties: {
+                                value_type: { const: "prompt" }
+                              }
+                            },
+                            then: {
+                              not: {
+                                anyOf: [
+                                  { required: ["constant_value"] },
+                                  { required: ["dynamic_variable"] }
+                                ]
+                              }
+                            }
+                          }
+                        ]
                       }
                     }
                   ]
@@ -222,7 +228,6 @@
     },
     {
       "type": "object",
-      "value_type": "constant",
       "id": "object_example",
       "description": "An object parameter with nested properties",
       "required": true,
