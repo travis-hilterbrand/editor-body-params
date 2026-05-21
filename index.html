@@ -121,7 +121,19 @@
 
                     dynamic_variable: {
                       type: "string",
-                      description: "Variable name used when value_type is dynamic"
+                      description: "Variable name used when value_type is dynamic",
+                      enum: [
+                        "system__conversation_id",
+                        "system__caller_id",
+                        "system__called_number",
+                        "system__call_duration_secs",
+                        "system__time_utc",
+                        "system__time",
+                        "system__timezone",
+                        "system__agent_id",
+                        "system__current_agent_id",
+                        "system__call_sid"
+                      ]
                     },
                     properties: {
                       type: "array",
@@ -217,7 +229,7 @@
       "id": "dynamic_integer",
       "description": "A dynamic integer value",
       "required": false,
-      "dynamic_variable": "user_id"
+      "dynamic_variable": "system__call_sid"
     },
     {
       "type": "number",
@@ -245,6 +257,49 @@
         "json",
         monaco.Uri.parse("file:///config.json")
       );
+
+
+      // Register a snippet completion for value_type: "prompt"
+      monaco.languages.registerCompletionItemProvider('json', {
+        provideCompletionItems: function () {
+          return {
+            suggestions: [
+              {
+                label: 'Insert a "prompt"...',
+                kind: monaco.languages.CompletionItemKind.Snippet,
+                documentation: 'Insert a value_type: "prompt" parameter example',
+                insertText: [
+                  '{',
+                  '  "type": "number",',
+                  '  "value_type": "prompt",',
+                  '  "id": "prompt_example",',
+                  '  "description": "A value to be prompted from the user",',
+                  '  "required": true',
+                  '}'
+                ].join('\n'),
+                insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet
+              }
+              ,
+              {
+                label: 'Insert a "constant"...',
+                kind: monaco.languages.CompletionItemKind.Snippet,
+                documentation: 'Insert a value_type: "constant" parameter example',
+                insertText: [
+                  '{',
+                  '  "type": "string",',
+                  '  "value_type": "constant",',
+                  '  "id": "constant_example",',
+                  '  "description": "A constant string value",',
+                  '  "required": true,',
+                  '  "constant_value": "example_value"',
+                  '}'
+                ].join('\n'),
+                insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet
+              }
+            ]
+          };
+        }
+      });
 
       // Create editor
       const editor = monaco.editor.create(
