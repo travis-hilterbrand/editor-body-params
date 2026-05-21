@@ -183,7 +183,7 @@
       );
 
       // Create editor
-      monaco.editor.create(
+      const editor = monaco.editor.create(
         document.getElementById("container"),
         {
           model,
@@ -191,6 +191,10 @@
           theme: "vs-dark",
 
           automaticLayout: true,
+
+          // Force diagnostics to render even when the editor is not focused.
+          renderValidationDecorations: "on",
+          glyphMargin: true,
 
           minimap: {
             enabled: false
@@ -212,6 +216,14 @@
           modelUri: model.uri.toString(),
           markers
         });
+
+        if (markers.length > 0) {
+          const first = markers[0];
+          editor.revealPositionInCenter({
+            lineNumber: first.startLineNumber,
+            column: first.startColumn
+          });
+        }
       }
 
       console.log("[Monaco JSON] active model URI:", model.uri.toString());
