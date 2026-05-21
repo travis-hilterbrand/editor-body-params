@@ -3,7 +3,7 @@
 
 <head>
   <meta charset="UTF-8" />
-  <title>Monaco JSON Schema Example</title>
+  <title>body_params editor</title>
 
   <style>
     html,
@@ -160,6 +160,31 @@
                       then: {
                         required: ["dynamic_variable"]
                       }
+                    },
+                    {
+                      if: {
+                        properties: {
+                          value_type: { const: "prompt" }
+                        }
+                      },
+                      then: {
+                        not: {
+                          anyOf: [
+                            { required: ["constant_value"] },
+                            { required: ["dynamic_variable"] }
+                          ]
+                        }
+                      }
+                    },
+                    {
+                      if: {
+                        properties: {
+                          type: { const: "object" }
+                        }
+                      },
+                      then: {
+                        required: ["properties"]
+                      }
                     }
                   ]
                 }
@@ -172,15 +197,46 @@
       // Create model
       const model = monaco.editor.createModel(
         `[
-  {
-    "type": "string",
-    "value_type": "constant",
-    "id": "constant_string",
-    "description": "",
-    "required": true,
-    "constant_value": "hello"
-  }
-]`,
+    {
+      "type": "string",
+      "value_type": "constant",
+      "id": "constant_string",
+      "description": "",
+      "required": true,
+      "constant_value": "hello"
+    },
+    {
+      "type": "integer",
+      "value_type": "dynamic",
+      "id": "dynamic_integer",
+      "description": "A dynamic integer value",
+      "required": false,
+      "dynamic_variable": "user_id"
+    },
+    {
+      "type": "number",
+      "value_type": "prompt",
+      "id": "prompt_number",
+      "description": "A value to be prompted from the user",
+      "required": true
+    },
+    {
+      "type": "object",
+      "value_type": "constant",
+      "id": "object_example",
+      "description": "An object parameter with nested properties",
+      "required": true,
+      "properties": [
+        {
+          "type": "string",
+          "value_type": "prompt",
+          "id": "nested_string",
+          "description": "A nested string property",
+          "required": false
+        }
+      ]
+    }
+  ]`,
         "json",
         monaco.Uri.parse("file:///config.json")
       );
