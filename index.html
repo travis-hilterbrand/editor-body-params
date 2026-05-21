@@ -378,6 +378,10 @@
 
       });
 
+      editor.onDidPaste(function () {
+        editor.getAction("editor.action.formatDocument").run()
+      });
+
       monaco.editor.onDidChangeMarkers(function () {
         logJsonDiagnostics("markers-change");
       });
