@@ -18,11 +18,19 @@
     #container {
       height: 90vh;
     }
+
+    #output {
+      height: 10vh;
+      background: #f0f0f0;
+      padding: 8px;
+      overflow: hidden auto;
+    }
   </style>
 </head>
 
 <body>
   <div id="container"></div>
+  <div id="output"></div>
 
   <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/min/vs/loader.js"></script>
 
@@ -188,7 +196,7 @@
         {
           model,
 
-          theme: "vs-dark",
+          theme: "hc-light",
 
           automaticLayout: true,
 
@@ -208,6 +216,23 @@
         }
       );
 
+      function renderStringArrayToOutput(items) {
+        const output = document.getElementById("output");
+        output.replaceChildren();
+
+        const list = document.createElement("ul");
+        list.style.margin = "0";
+        list.style.paddingLeft = "20px";
+
+        items.forEach(function (item) {
+          const row = document.createElement("li");
+          row.textContent = item;
+          list.appendChild(row);
+        });
+
+        output.appendChild(list);
+      }
+
       function logJsonDiagnostics(reason) {
         const markers = monaco.editor.getModelMarkers({
           resource: model.uri
@@ -218,11 +243,19 @@
         });
 
         if (markers.length > 0) {
+          renderStringArrayToOutput(
+            markers.map(function (marker) {
+              return "L" + marker.startLineNumber + ": " + marker.message;
+            })
+          );
+
           const first = markers[0];
           editor.revealPositionInCenter({
             lineNumber: first.startLineNumber,
             column: first.startColumn
           });
+        } else {
+          renderStringArrayToOutput(["No validation errors."]);
         }
       }
 
@@ -231,6 +264,7 @@
 
       model.onDidChangeContent(function () {
         logJsonDiagnostics("content-change");
+
       });
 
       monaco.editor.onDidChangeMarkers(function () {
