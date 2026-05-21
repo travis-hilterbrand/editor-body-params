@@ -55,9 +55,16 @@
             fileMatch: ["*"],
 
             schema: {
-              $ref: "#/definitions/BodyParamType",
+              $ref: "#/definitions/BodyParamsType",
 
               definitions: {
+                BodyParamsType: {
+                  type: "array",
+                  items: {
+                    $ref: "#/definitions/BodyParamType"
+                  }
+                },
+
                 BodyParamType: {
                   type: "object",
 
@@ -65,8 +72,7 @@
                     "type",
                     "value_type",
                     "id",
-                    "description",
-                    "required"
+                    "description"
                   ],
 
                   properties: {
@@ -75,7 +81,6 @@
                       enum: [
                         "array",
                         "boolean",
-                        "enum",
                         "integer",
                         "number",
                         "object",
@@ -119,7 +124,6 @@
                       type: "string",
                       description: "Variable name used when value_type is dynamic"
                     },
-
                     properties: {
                       type: "array",
                       minItems: 1,
@@ -133,18 +137,6 @@
                   additionalProperties: false,
 
                   allOf: [
-                    {
-                      if: {
-                        properties: {
-                          type: {
-                            const: "object"
-                          }
-                        }
-                      },
-                      then: {
-                        required: ["properties"]
-                      }
-                    },
                     {
                       if: {
                         properties: {
@@ -179,13 +171,16 @@
 
       // Create model
       const model = monaco.editor.createModel(
-        `{
-  "type": "string",
-  "value_type": "constant",
-  "id": "constant_string",
-  "description": "",
-  "required": true
-}`,
+        `[
+  {
+    "type": "string",
+    "value_type": "constant",
+    "id": "constant_string",
+    "description": "",
+    "required": true,
+    "constant_value": "hello"
+  }
+]`,
         "json",
         monaco.Uri.parse("file:///config.json")
       );
