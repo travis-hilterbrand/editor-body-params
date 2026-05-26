@@ -78,9 +78,12 @@
               definitions: {
                 BodyParamsType: {
                   type: "object",
-                  additionalProperties: {
-                    $ref: "#/definitions/BodyParamType"
-                  }
+                  patternProperties: {
+                    ".+": {
+                      $ref: "#/definitions/BodyParamType"
+                    }
+                  },
+                  additionalProperties: false
                 },
 
                 BodyParamType: {
@@ -157,9 +160,12 @@
                       type: "object",
                       description: "Object properties",
                       minProperties: 1,
-                      additionalProperties: {
-                        $ref: "#/definitions/BodyParamType"
-                      }
+                      patternProperties: {
+                        ".+": {
+                          $ref: "#/definitions/BodyParamType"
+                        }
+                      },
+                      additionalProperties: false
                     }
                   },
 
