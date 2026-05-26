@@ -25,10 +25,28 @@
       padding: 8px;
       overflow: hidden auto;
     }
+
+    #format-btn {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      z-index: 10;
+      border: 1px solid #333;
+      border-radius: 6px;
+      background: #fff;
+      padding: 6px 10px;
+      cursor: pointer;
+      font: 13px/1.2 sans-serif;
+    }
+
+    #format-btn:hover {
+      background: #f5f5f5;
+    }
   </style>
 </head>
 
 <body>
+  <button id="format-btn" type="button">Format</button>
   <div id="container"></div>
   <div id="output"></div>
 
@@ -321,6 +339,12 @@
           contextmenu: false
         }
       );
+
+      const formatButton = document.getElementById("format-btn");
+      formatButton.addEventListener("click", function () {
+        editor.focus();
+        editor.getAction("editor.action.formatDocument").run();
+      });
 
       function renderStringArrayToOutput(items) {
         const output = document.getElementById("output");
