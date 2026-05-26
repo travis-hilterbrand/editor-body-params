@@ -316,27 +316,28 @@
       const editor = monaco.editor.create(
         document.getElementById("container"),
         {
-          model,
-
-          theme: "hc-light",
-
           automaticLayout: true,
+
+          contextmenu: false,
+
+          formatOnPaste: true,
+          formatOnType: true,
+
+          glyphMargin: true,
 
           // Force diagnostics to render even when the editor is not focused.
           renderValidationDecorations: "on",
-          glyphMargin: true,
 
           minimap: {
             enabled: false
           },
 
-          formatOnPaste: true,
-          formatOnType: true,
+          model,
 
           quickSuggestions: true,
           suggestOnTriggerCharacters: true,
 
-          contextmenu: false
+          theme: "hc-light"
         }
       );
 
