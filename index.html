@@ -59,8 +59,8 @@
 
               definitions: {
                 BodyParamsType: {
-                  type: "array",
-                  items: {
+                  type: "object",
+                  additionalProperties: {
                     $ref: "#/definitions/BodyParamType"
                   }
                 },
@@ -70,7 +70,6 @@
 
                   required: [
                     "type",
-                    "id",
                     "description"
                   ],
 
@@ -98,12 +97,6 @@
                       description: "How the parameter value is provided"
                     },
 
-                    id: {
-                      type: "string",
-                      minLength: 1,
-                      description: "Unique parameter id"
-                    },
-
                     description: {
                       type: "string",
                       description: "Human-readable description"
@@ -116,7 +109,7 @@
 
                     constant_value: {
                       type: "string",
-                      description: "Literal value used when value_type is constant"
+                      description: "Value used when value_type is constant"
                     },
 
                     dynamic_variable: {
@@ -143,10 +136,10 @@
                       ]
                     },
                     properties: {
-                      type: "array",
-                      minItems: 1,
-                      description: "Nested child parameters",
-                      items: {
+                      type: "object",
+                      description: "Object properties",
+                      minProperties: 1,
+                      additionalProperties: {
                         $ref: "#/definitions/BodyParamType"
                       }
                     }
@@ -221,46 +214,41 @@
 
       // Create model
       const model = monaco.editor.createModel(
-        `[
-    {
-      "type": "string",
-      "value_type": "constant",
-      "id": "constant_string",
-      "description": "",
-      "required": true,
-      "constant_value": "hello"
-    },
-    {
-      "type": "integer",
-      "value_type": "dynamic",
-      "id": "dynamic_integer",
-      "description": "A dynamic integer value",
-      "required": false,
-      "dynamic_variable": "system__call_sid"
-    },
-    {
-      "type": "number",
-      "value_type": "prompt",
-      "id": "prompt_number",
-      "description": "A value to be prompted from the user",
-      "required": true
-    },
-    {
-      "type": "object",
-      "id": "object_example",
-      "description": "An object parameter with nested properties",
-      "required": true,
-      "properties": [
-        {
-          "type": "string",
-          "value_type": "prompt",
-          "id": "nested_string",
-          "description": "A nested string property",
-          "required": false
-        }
-      ]
+        `{
+  "constant_string": {
+    "type": "string",
+    "value_type": "constant",
+    "description": "",
+    "required": true,
+    "constant_value": "hello"
+  },
+  "dynamic_integer": {
+    "type": "integer",
+    "value_type": "dynamic",
+    "description": "A dynamic integer value",
+    "required": false,
+    "dynamic_variable": "system__call_sid"
+  },
+  "prompt_number": {
+    "type": "number",
+    "value_type": "prompt",
+    "description": "A value to be prompted from the user",
+    "required": true
+  },
+  "object_example": {
+    "type": "object",
+    "description": "An object parameter with nested properties",
+    "required": true,
+    "properties": {
+      "my_key": {
+        "type": "string",
+        "value_type": "prompt",
+        "description": "A nested string property",
+        "required": false
+      }
     }
-  ]`,
+  }
+}`,
         "json",
         monaco.Uri.parse("file:///config.json")
       );
@@ -276,11 +264,10 @@
                 kind: monaco.languages.CompletionItemKind.Snippet,
                 documentation: 'Insert a value_type: "prompt" parameter example',
                 insertText: [
-                  '{',
+                  '"": {',
                   '  "type": "number",',
                   '  "value_type": "prompt",',
-                  '  "id": "prompt_example",',
-                  '  "description": "A value to be prompted from the user",',
+                  '  "description": "",',
                   '  "required": true',
                   '}'
                 ].join('\n'),
@@ -292,13 +279,12 @@
                 kind: monaco.languages.CompletionItemKind.Snippet,
                 documentation: 'Insert a value_type: "constant" parameter example',
                 insertText: [
-                  '{',
+                  '"": {',
                   '  "type": "string",',
                   '  "value_type": "constant",',
-                  '  "id": "constant_example",',
-                  '  "description": "A constant string value",',
+                  '  "description": "",',
                   '  "required": true,',
-                  '  "constant_value": "example_value"',
+                  '  "constant_value": ""',
                   '}'
                 ].join('\n'),
                 insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet
@@ -330,7 +316,9 @@
           formatOnType: true,
 
           quickSuggestions: true,
-          suggestOnTriggerCharacters: true
+          suggestOnTriggerCharacters: true,
+
+          contextmenu: false
         }
       );
 
