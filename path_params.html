@@ -3,7 +3,7 @@
 
 <head>
   <meta charset="UTF-8" />
-  <title>query_params editor</title>
+  <title>path_params editor</title>
 
   <style>
     html,
@@ -73,20 +73,20 @@
             fileMatch: ["*"],
 
             schema: {
-              $ref: "#/definitions/QueryParamsType",
+              $ref: "#/definitions/PathParamsType",
 
               definitions: {
-                QueryParamsType: {
+                PathParamsType: {
                   type: "object",
                   patternProperties: {
                     ".+": {
-                      $ref: "#/definitions/QueryParamType"
+                      $ref: "#/definitions/PathParamType"
                     }
                   },
                   additionalProperties: false
                 },
 
-                QueryParamType: {
+                PathParamType: {
                   type: "object",
 
                   required: [
@@ -115,72 +115,34 @@
                       description: "Whether this parameter is required"
                     },
 
-                    constant_value: {
+                    dynamic_variable: {
+                      type: "string",
+                      minLength: 1,
+                      description: "Variable name used when value_type is dynamic",
                       anyOf: [
                         {
+                          enum: [
+                            "system__conversation_id",
+                            "system__caller_id",
+                            "system__called_number",
+                            "system__call_duration_secs",
+                            "system__time_utc",
+                            "system__time",
+                            "system__timezone",
+                            "system__agent_id",
+                            "system__current_agent_id",
+                            "system__call_sid"
+                          ]
+                        },
+                        {
                           type: "string"
-                        },
-                        {
-                          type: "number"
-                        },
-                        {
-                          type: "boolean"
                         }
-                      ],
-                      description: "Constant value"
-                    },
-
+                      ]
+                    }
                   },
 
                   additionalProperties: false,
 
-                  allOf: [
-                    {
-                      if: {
-                        properties: {
-                          type: { const: "boolean" }
-                        }
-                      },
-                      then: {
-                        properties: {
-                          constant_value: {
-                            type: "boolean"
-                          }
-                        }
-                      }
-                    },
-                    {
-                      if: {
-                        properties: {
-                          type: {
-                            enum: ["number", "integer"]
-                          }
-                        }
-                      },
-                      then: {
-                        properties: {
-                          constant_value: {
-                            type: "number"
-                          }
-                        }
-                      }
-                    },
-                    {
-                      if: {
-                        properties: {
-                          type: { const: "string" }
-                        }
-                      },
-                      then: {
-                        properties: {
-                          constant_value: {
-                            type: "string",
-                            minLength: 1
-                          }
-                        }
-                      }
-                    }
-                  ]
                 }
               }
             }
@@ -192,21 +154,13 @@
       const model = monaco.editor.createModel(
         `{
     "criteriaId": {
-        "constant_value": "query_1_constant",
-        "description": "Has a description",
-        "required": true,
-        "type": "string"
-    },
-    "criteriaIdBool": {
-        "constant_value": true,
-        "type": "boolean"
-    },
-    "criteriaIdInt": {
-        "constant_value": 5,
-        "type": "integer"
+        "type": "string",
+        "description": "Criteria id",
+        "required": true
     },
     "orderId": {
-        "type": "string"
+        "type": "string",
+        "dynamic_variable": "system__agent_id"
     }
 }`,
         "json",
@@ -224,7 +178,8 @@
                 documentation: 'Insert a value_type: "prompt" parameter example',
                 insertText: [
                   '"": {',
-                  '  "type": "number",',
+                  '  "type": "string",',
+                  '  "description": "",',
                   '  "required": false',
                   '}'
                 ].join('\n'),
@@ -232,14 +187,15 @@
               }
               ,
               {
-                label: 'Insert a "constant"...',
+                label: 'Insert a dynamic...',
                 kind: monaco.languages.CompletionItemKind.Snippet,
                 documentation: 'Insert a value_type: "constant" parameter example',
                 insertText: [
                   '"": {',
                   '  "type": "string",',
+                  '  "description": "",',
                   '  "required": true,',
-                  '  "constant_value": ""',
+                  '  "dynamic_variable": ""',
                   '}'
                 ].join('\n'),
                 insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet
