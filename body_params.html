@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8" />
+  <title>body_params editor</title>
+
+  <style>
+    html,
+    body,
+    #container {
+      margin: 0;
+      width: 100%;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    #container {
+      height: 80vh;
+    }
+
+    #output {
+      height: 20vh;
+      background: #f0f0f0;
+      padding: 8px;
+      overflow: hidden auto;
+    }
+
+    #format-btn {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      z-index: 10;
+      border: 1px solid #333;
+      border-radius: 6px;
+      background: #fff;
+      padding: 6px 10px;
+      cursor: pointer;
+      font: 13px/1.2 sans-serif;
+    }
+
+    #format-btn:hover {
+      background: #f5f5f5;
+    }
+  </style>
+</head>
+
+<body>
+  <button id="format-btn" type="button">Format</button>
+  <div id="container"></div>
+  <div id="output"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/min/vs/loader.js"></script>
+
+  <script>
+    require.config({
+      paths: {
+        vs: "https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/min/vs"
+      }
+    });
+
+    require(["vs/editor/editor.main"], function () {
+
+      // Configure JSON schema
+      monaco.languages.json.jsonDefaults.setDiagnosticsOptions({
+        validate: true,
+        allowComments: false,
+        schemas: [
+          {
+            uri: "http://my-schema/user-schema.json",
+
+            // Which files this schema applies to
+            fileMatch: ["*"],
+
+            schema: {
+              $ref: "#/definitions/BodyParamsType",
+
+              definitions: {
+                BodyParamsType: {
+                  type: "object",
+                  patternProperties: {
+                    ".+": {
+                      $ref: "#/definitions/BodyParamType"
+                    }
+                  },
+                  additionalProperties: false
+                },
+
+                BodyParamType: {
+                  type: "object",
+
+                  required: [
+                    "type",
+                    "description"
+                  ],
+
+                  properties: {
+                    type: {
+                      type: "string",
+                      enum: [
+                        "array",
+                        "boolean",
+                        "integer",
+                        "number",
+                        "object",
+                        "string"
+                      ],
+                      description: "Parameter data type"
+                    },
+
+                    value_type: {
+                      type: "string",
+                      enum: [
+                        "constant",
+                        "dynamic",
+                        "prompt"
+                      ],
+                      description: "How the parameter value is provided"
+                    },
+
+                    description: {
+                      type: "string",
+                      description: "Human-readable description"
+                    },
+
+                    required: {
+                      type: "boolean",
+                      description: "Whether this parameter is required"
+                    },
+
+                    constant_value: {
+                      type: "string",
+                      description: "Value used when value_type is constant"
+                    },
+
+                    dynamic_variable: {
+                      type: "string",
+                      description: "Variable name used when value_type is dynamic",
+                      anyOf: [
+                        {
+                          enum: [
+                            "system__conversation_id",
+                            "system__caller_id",
+                            "system__called_number",
+                            "system__call_duration_secs",
+                            "system__time_utc",
+                            "system__time",
+                            "system__timezone",
+                            "system__agent_id",
+                            "system__current_agent_id",
+                            "system__call_sid"
+                          ]
+                        },
+                        {
+                          type: "string"
+                        }
+                      ]
+                    },
+                    properties: {
+                      type: "object",
+                      description: "Object properties",
+                      minProperties: 1,
+                      patternProperties: {
+                        ".+": {
+                          $ref: "#/definitions/BodyParamType"
+                        }
+                      },
+                      additionalProperties: false
+                    }
+                  },
+
+                  additionalProperties: false,
+
+                  allOf: [
+                    {
+                      if: {
+                        properties: {
+                          type: { const: "object" }
+                        }
+                      },
+                      then: {
+                        required: ["properties"],
+                        not: {
+                          anyOf: [
+                            { required: ["value_type"] },
+                            { required: ["constant_value"] },
+                            { required: ["dynamic_variable"] }
+                          ]
+                        }
+                      },
+                      else: {
+                        allOf: [
+                          {
+                            if: {
+                              properties: {
+                                value_type: { const: "constant" }
+                              }
+                            },
+                            then: {
+                              required: ["constant_value"]
+                            }
+                          },
+                          {
+                            if: {
+                              properties: {
+                                value_type: { const: "dynamic" }
+                              }
+                            },
+                            then: {
+                              required: ["dynamic_variable"]
+                            }
+                          },
+                          {
+                            if: {
+                              properties: {
+                                value_type: { const: "prompt" }
+                              }
+                            },
+                            then: {
+                              not: {
+                                anyOf: [
+                                  { required: ["constant_value"] },
+                                  { required: ["dynamic_variable"] }
+                                ]
+                              }
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        ]
+      });
+
+      // Create model
+      const model = monaco.editor.createModel(
+        `{
+  "constant_string": {
+    "type": "string",
+    "value_type": "constant",
+    "description": "",
+    "required": true,
+    "constant_value": "hello"
+  },
+  "dynamic_integer": {
+    "type": "integer",
+    "value_type": "dynamic",
+    "description": "A dynamic integer value",
+    "required": false,
+    "dynamic_variable": "system__call_sid"
+  },
+  "prompt_number": {
+    "type": "number",
+    "value_type": "prompt",
+    "description": "A value to be prompted from the user",
+    "required": true
+  },
+  "object_example": {
+    "type": "object",
+    "description": "An object parameter with nested properties",
+    "required": true,
+    "properties": {
+      "my_key": {
+        "type": "string",
+        "value_type": "prompt",
+        "description": "A nested string property",
+        "required": false
+      }
+    }
+  }
+}`,
+        "json",
+        monaco.Uri.parse("file:///config.json")
+      );
+
+
+      // Register a snippet completion for value_type: "prompt"
+      monaco.languages.registerCompletionItemProvider('json', {
+        provideCompletionItems: function () {
+          return {
+            suggestions: [
+              {
+                label: 'Insert a "prompt"...',
+                kind: monaco.languages.CompletionItemKind.Snippet,
+                documentation: 'Insert a value_type: "prompt" parameter example',
+                insertText: [
+                  '"": {',
+                  '  "type": "number",',
+                  '  "value_type": "prompt",',
+                  '  "description": "",',
+                  '  "required": true',
+                  '}'
+                ].join('\n'),
+                insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet
+              }
+              ,
+              {
+                label: 'Insert a "constant"...',
+                kind: monaco.languages.CompletionItemKind.Snippet,
+                documentation: 'Insert a value_type: "constant" parameter example',
+                insertText: [
+                  '"": {',
+                  '  "type": "string",',
+                  '  "value_type": "constant",',
+                  '  "description": "",',
+                  '  "required": true,',
+                  '  "constant_value": ""',
+                  '}'
+                ].join('\n'),
+                insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet
+              }
+            ]
+          };
+        }
+      });
+
+      // Create editor
+      const editor = monaco.editor.create(
+        document.getElementById("container"),
+        {
+          automaticLayout: true,
+
+          contextmenu: false,
+
+          formatOnPaste: true,
+          formatOnType: true,
+
+          glyphMargin: true,
+
+          // Force diagnostics to render even when the editor is not focused.
+          renderValidationDecorations: "on",
+
+          minimap: {
+            enabled: false
+          },
+
+          model,
+
+          quickSuggestions: true,
+          suggestOnTriggerCharacters: true,
+
+          tabSize: 2,
+          insertSpaces: true,
+          theme: "hc-light"
+        }
+      );
+
+      const formatButton = document.getElementById("format-btn");
+      formatButton.addEventListener("click", function () {
+        editor.focus();
+        editor.getAction("editor.action.formatDocument").run();
+      });
+
+      function renderStringArrayToOutput(items) {
+        const output = document.getElementById("output");
+        output.replaceChildren();
+
+        const list = document.createElement("ul");
+        list.style.margin = "0";
+        list.style.paddingLeft = "20px";
+
+        items.forEach(function (item) {
+          const row = document.createElement("li");
+          row.textContent = item;
+          list.appendChild(row);
+        });
+
+        output.appendChild(list);
+      }
+
+      function logJsonDiagnostics(reason) {
+        const markers = monaco.editor.getModelMarkers({
+          resource: model.uri
+        });
+        console.log("[Monaco JSON]", reason, {
+          modelUri: model.uri.toString(),
+          markers
+        });
+
+        if (markers.length > 0) {
+          renderStringArrayToOutput(
+            markers.map(function (marker) {
+              return "L" + marker.startLineNumber + ": " + marker.message;
+            })
+          );
+
+          const first = markers[0];
+          editor.revealPositionInCenter({
+            lineNumber: first.startLineNumber,
+            column: first.startColumn
+          });
+        } else {
+          renderStringArrayToOutput(["No validation errors."]);
+        }
+      }
+
+      console.log("[Monaco JSON] active model URI:", model.uri.toString());
+      logJsonDiagnostics("initial");
+
+      model.onDidChangeContent(function () {
+        logJsonDiagnostics("content-change");
+
+      });
+
+      editor.onDidPaste(function () {
+        editor.getAction("editor.action.formatDocument").run()
+      });
+
+      monaco.editor.onDidChangeMarkers(function () {
+        logJsonDiagnostics("markers-change");
+      });
+    });
+  </script>
+</body>
+
+</html>

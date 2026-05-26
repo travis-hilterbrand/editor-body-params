@@ -3,7 +3,7 @@
 
 <head>
   <meta charset="UTF-8" />
-  <title>body_params editor</title>
+  <title>query_params editor</title>
 
   <style>
     html,
@@ -73,49 +73,36 @@
             fileMatch: ["*"],
 
             schema: {
-              $ref: "#/definitions/BodyParamsType",
+              $ref: "#/definitions/QueryParamsType",
 
               definitions: {
-                BodyParamsType: {
+                QueryParamsType: {
                   type: "object",
                   patternProperties: {
                     ".+": {
-                      $ref: "#/definitions/BodyParamType"
+                      $ref: "#/definitions/QueryParamType"
                     }
                   },
                   additionalProperties: false
                 },
 
-                BodyParamType: {
+                QueryParamType: {
                   type: "object",
 
                   required: [
-                    "type",
-                    "description"
+                    "type"
                   ],
 
                   properties: {
                     type: {
                       type: "string",
                       enum: [
-                        "array",
                         "boolean",
                         "integer",
                         "number",
-                        "object",
                         "string"
                       ],
                       description: "Parameter data type"
-                    },
-
-                    value_type: {
-                      type: "string",
-                      enum: [
-                        "constant",
-                        "dynamic",
-                        "prompt"
-                      ],
-                      description: "How the parameter value is provided"
                     },
 
                     description: {
@@ -129,13 +116,23 @@
                     },
 
                     constant_value: {
-                      type: "string",
-                      description: "Value used when value_type is constant"
+                      anyOf: [
+                        {
+                          type: "string"
+                        },
+                        {
+                          type: "number"
+                        },
+                        {
+                          type: "boolean"
+                        }
+                      ],
+                      description: "Constant value"
                     },
 
                     dynamic_variable: {
                       type: "string",
-                      description: "Variable name used when value_type is dynamic",
+                      description: "Variable name used for dynamic values",
                       anyOf: [
                         {
                           enum: [
@@ -155,17 +152,6 @@
                           type: "string"
                         }
                       ]
-                    },
-                    properties: {
-                      type: "object",
-                      description: "Object properties",
-                      minProperties: 1,
-                      patternProperties: {
-                        ".+": {
-                          $ref: "#/definitions/BodyParamType"
-                        }
-                      },
-                      additionalProperties: false
                     }
                   },
 
@@ -175,57 +161,46 @@
                     {
                       if: {
                         properties: {
-                          type: { const: "object" }
+                          type: { const: "boolean" }
                         }
                       },
                       then: {
-                        required: ["properties"],
-                        not: {
-                          anyOf: [
-                            { required: ["value_type"] },
-                            { required: ["constant_value"] },
-                            { required: ["dynamic_variable"] }
-                          ]
+                        properties: {
+                          constant_value: {
+                            type: "boolean"
+                          }
+                        }
+                      }
+                    },
+                    {
+                      if: {
+                        properties: {
+                          type: {
+                            enum: ["number", "integer"]
+                          }
                         }
                       },
-                      else: {
-                        allOf: [
-                          {
-                            if: {
-                              properties: {
-                                value_type: { const: "constant" }
-                              }
-                            },
-                            then: {
-                              required: ["constant_value"]
-                            }
-                          },
-                          {
-                            if: {
-                              properties: {
-                                value_type: { const: "dynamic" }
-                              }
-                            },
-                            then: {
-                              required: ["dynamic_variable"]
-                            }
-                          },
-                          {
-                            if: {
-                              properties: {
-                                value_type: { const: "prompt" }
-                              }
-                            },
-                            then: {
-                              not: {
-                                anyOf: [
-                                  { required: ["constant_value"] },
-                                  { required: ["dynamic_variable"] }
-                                ]
-                              }
-                            }
+                      then: {
+                        properties: {
+                          constant_value: {
+                            type: "number"
                           }
-                        ]
+                        }
+                      }
+                    },
+                    {
+                      if: {
+                        properties: {
+                          type: { const: "string" }
+                        }
+                      },
+                      then: {
+                        properties: {
+                          constant_value: {
+                            type: "string",
+                            minLength: 1
+                          }
+                        }
                       }
                     }
                   ]
@@ -239,46 +214,29 @@
       // Create model
       const model = monaco.editor.createModel(
         `{
-  "constant_string": {
-    "type": "string",
-    "value_type": "constant",
-    "description": "",
-    "required": true,
-    "constant_value": "hello"
-  },
-  "dynamic_integer": {
-    "type": "integer",
-    "value_type": "dynamic",
-    "description": "A dynamic integer value",
-    "required": false,
-    "dynamic_variable": "system__call_sid"
-  },
-  "prompt_number": {
-    "type": "number",
-    "value_type": "prompt",
-    "description": "A value to be prompted from the user",
-    "required": true
-  },
-  "object_example": {
-    "type": "object",
-    "description": "An object parameter with nested properties",
-    "required": true,
-    "properties": {
-      "my_key": {
-        "type": "string",
-        "value_type": "prompt",
-        "description": "A nested string property",
-        "required": false
-      }
+    "criteriaId": {
+        "constant_value": "query_1_constant",
+        "description": "Has a description",
+        "required": true,
+        "type": "string"
+    },
+    "criteriaIdBool": {
+        "constant_value": true,
+        "type": "boolean"
+    },
+    "criteriaIdInt": {
+        "constant_value": 5,
+        "type": "integer"
+    },
+    "orderId": {
+        "type": "string"
     }
-  }
 }`,
         "json",
         monaco.Uri.parse("file:///config.json")
       );
 
 
-      // Register a snippet completion for value_type: "prompt"
       monaco.languages.registerCompletionItemProvider('json', {
         provideCompletionItems: function () {
           return {
@@ -290,9 +248,7 @@
                 insertText: [
                   '"": {',
                   '  "type": "number",',
-                  '  "value_type": "prompt",',
-                  '  "description": "",',
-                  '  "required": true',
+                  '  "required": false',
                   '}'
                 ].join('\n'),
                 insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet
@@ -305,8 +261,6 @@
                 insertText: [
                   '"": {',
                   '  "type": "string",',
-                  '  "value_type": "constant",',
-                  '  "description": "",',
                   '  "required": true,',
                   '  "constant_value": ""',
                   '}'
@@ -343,6 +297,8 @@
           quickSuggestions: true,
           suggestOnTriggerCharacters: true,
 
+          tabSize: 2,
+          insertSpaces: true,
           theme: "hc-light"
         }
       );

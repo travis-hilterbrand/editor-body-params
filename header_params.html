@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8" />
+  <title>header_params editor</title>
+
+  <style>
+    html,
+    body,
+    #container {
+      margin: 0;
+      width: 100%;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    #container {
+      height: 80vh;
+    }
+
+    #output {
+      height: 20vh;
+      background: #f0f0f0;
+      padding: 8px;
+      overflow: hidden auto;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="container"></div>
+  <div id="output"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/min/vs/loader.js"></script>
+
+  <script>
+    require.config({
+      paths: {
+        vs: "https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/min/vs"
+      }
+    });
+
+    require(["vs/editor/editor.main"], function () {
+
+      // Configure JSON schema
+      monaco.languages.json.jsonDefaults.setDiagnosticsOptions({
+        validate: true,
+        allowComments: false,
+        schemas: [
+          {
+            uri: "http://my-schema/user-schema.json",
+
+            // Which files this schema applies to
+            fileMatch: ["*"],
+
+            schema: {
+              $ref: "#/definitions/Headers",
+
+              definitions: {
+                Headers: {
+                  type: "object",
+                  additionalProperties: {
+                    $ref: "#/definitions/HeaderParamType"
+                  }
+                },
+
+                HeaderParamType: {
+                  oneOf: [
+                    {
+                      type: "object",
+                      required: ["type", "secret_id"],
+                      properties: {
+                        type: {
+                          const: "secret"
+                        },
+                        secret_id: {
+                          type: "string",
+                          minLength: 1
+                        }
+                      },
+                      additionalProperties: false
+                    },
+                    {
+                      type: "object",
+                      required: ["type"],
+                      properties: {
+                        type: {
+                          const: "static"
+                        },
+                        value: {
+                          type: "string",
+                          minLength: 1
+                        },
+                        variable_name: {
+                          anyOf: [
+                            {
+                              enum: [
+                                "system__conversation_id",
+                                "system__caller_id",
+                                "system__called_number",
+                                "system__call_duration_secs",
+                                "system__time_utc",
+                                "system__time",
+                                "system__timezone",
+                                "system__agent_id",
+                                "system__current_agent_id",
+                                "system__call_sid"
+                              ]
+                            },
+                            {
+                              type: "string",
+                              minLength: 1
+                            }
+                          ]
+                        }
+                      },
+                      anyOf: [
+                        { required: ["value"] },
+                        { required: ["variable_name"] }
+                      ],
+                      additionalProperties: false
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        ]
+      });
+
+      // Create model
+      const model = monaco.editor.createModel(
+        `{
+    "X-Header-Test": {
+      "type": "static",
+      "value": "header-value"
+    },
+    "X-dynamic": {
+      "type": "static",
+      "variable_name": "system__call_sid"
+    },
+    "X-secret": {
+      "type": "secret",
+      "secret_id": "secret id"
+    }
+}`,
+        "json",
+        monaco.Uri.parse("file:///config.json")
+      );
+
+
+      // Register a snippet completion for value_type: "prompt"
+      monaco.languages.registerCompletionItemProvider('json', {
+        provideCompletionItems: function () {
+          return {
+            suggestions: [
+              {
+                label: 'Insert a static header...',
+                kind: monaco.languages.CompletionItemKind.Snippet,
+                insertText: [
+                  '"": {',
+                  '  "type": "static",',
+                  '  "value": ""',
+                  '}',
+                  ''
+                ].join('\n'),
+                insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet
+              },
+              {
+                label: 'Insert a dynamic header...',
+                kind: monaco.languages.CompletionItemKind.Snippet,
+                insertText: [
+                  '"": {',
+                  '  "type": "static",',
+                  '  "variable_name": ""',
+                  '}',
+                  ''
+                ].join('\n'),
+                insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet
+              }
+              ,
+              {
+                label: 'Insert a secret header...',
+                kind: monaco.languages.CompletionItemKind.Snippet,
+                insertText: [
+                  '"": {',
+                  '  "type": "secret",',
+                  '  "secret_id": ""',
+                  '}',
+                  ''
+                ].join('\n'),
+                insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet
+              }
+            ]
+          };
+        }
+      });
+
+      // Create editor
+      const editor = monaco.editor.create(
+        document.getElementById("container"),
+        {
+          automaticLayout: true,
+          contextmenu: false,
+          formatOnPaste: true,
+          formatOnType: true,
+          glyphMargin: true,
+          insertSpaces: true,
+          minimap: {
+            enabled: false
+          },
+          model,
+          quickSuggestions: true,
+          renderValidationDecorations: "on",
+          suggestOnTriggerCharacters: true,
+          tabSize: 2,
+          theme: "hc-light"
+        }
+      );
+
+      function renderStringArrayToOutput(items) {
+        const output = document.getElementById("output");
+        output.replaceChildren();
+
+        const list = document.createElement("ul");
+        list.style.margin = "0";
+        list.style.paddingLeft = "20px";
+
+        items.forEach(function (item) {
+          const row = document.createElement("li");
+          row.textContent = item;
+          list.appendChild(row);
+        });
+
+        output.appendChild(list);
+      }
+
+      function logJsonDiagnostics(reason) {
+        const markers = monaco.editor.getModelMarkers({
+          resource: model.uri
+        });
+        console.log("[Monaco JSON]", reason, {
+          modelUri: model.uri.toString(),
+          markers
+        });
+
+        if (markers.length > 0) {
+          renderStringArrayToOutput(
+            markers.map(function (marker) {
+              return "L" + marker.startLineNumber + ": " + marker.message;
+            })
+          );
+
+          const first = markers[0];
+          editor.revealPositionInCenter({
+            lineNumber: first.startLineNumber,
+            column: first.startColumn
+          });
+        } else {
+          renderStringArrayToOutput(["No validation errors."]);
+        }
+      }
+
+      console.log("[Monaco JSON] active model URI:", model.uri.toString());
+      logJsonDiagnostics("initial");
+
+      model.onDidChangeContent(function () {
+        logJsonDiagnostics("content-change");
+
+      });
+
+      editor.onDidPaste(function () {
+        editor.getAction("editor.action.formatDocument").run()
+      });
+
+      monaco.editor.onDidChangeMarkers(function () {
+        logJsonDiagnostics("markers-change");
+      });
+    });
+  </script>
+</body>
+
+</html>
